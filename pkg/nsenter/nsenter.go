@@ -1,3 +1,4 @@
+// Forked from https://github.com/Devatoria/go-nsenter
 package nsenter
 
 import (

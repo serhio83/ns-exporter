@@ -1,23 +1,26 @@
 package main
 
 import (
-"context"
+	"context"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 
-	"ns-exporter/pkg/nsenter"
+	"github.com/serhio83/ns-exporter/pkg/nsenter"
 
-"github.com/docker/docker/api/types"
-"github.com/docker/docker/client"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 )
 
 const defaultDockerAPIVersion = "v1.35"
 
+type sock map[string]int
+
 type Container struct {
 	Name    string
 	Pid     int
-	Sockets []string
+	Sockets []sock
 }
 
 type Containers struct {
@@ -55,8 +58,7 @@ func getContainers() Containers {
 	return Containers{List: myList}
 }
 
-
-func getSockets(pid int) []string {
+func getSockets(pid int) []sock {
 	// configure to enter network namespace (Net: true)
 	nscfg := nsenter.Config{
 		Net:	true,
@@ -64,17 +66,19 @@ func getSockets(pid int) []string {
 	}
 
 	// get sockets from container namespace
-	stdout, _, err := nscfg.Execute("ss", "-nat")
-	if err != nil {
-		log.Println(err)
-	}
+	stdout, _, _ := nscfg.Execute("ss", "-nat")
 
-	// find all needed sockets in ESTAB state
+	// find all needed sockets in ESTAB state by regex compiled above
 	str := re.FindAllString(stdout, len(stdout))
-	socks := make([]string, 0)
+	var socks []sock
+
 	for _, s := range str{
 		result := strings.Fields(s)
-		socks = append(socks, result[4])
+		mySocket := strings.Split(result[4], ":")
+		var skt = make(map[string]int)
+		port,_ := strconv.Atoi(mySocket[1])
+		skt[mySocket[0]] = port
+		socks = append(socks, skt)
 	}
 	return socks
 }
