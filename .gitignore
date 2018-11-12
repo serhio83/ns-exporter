@@ -1,2 +1,12 @@
 .idea
 exporter
+bin
+pkg
+
+!src/
+src/*
+!src/github.com/
+src/github.com/*
+!src/github.com/serhio83
+src/github.com/serhio83/*
+!src/github.com/serhio83/ns-exporter

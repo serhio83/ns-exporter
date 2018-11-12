@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/serhio83/ns-exporter/pkg/nsenter"
+	"github.com/serhio83/ns-exporter/nsenter"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -49,9 +49,9 @@ func getContainers() Containers {
 			log.Println(err)
 		}
 		cont := Container{
-			Name: 		container.Names[0][1:],
-			Pid:  		pid.State.Pid,
-			Sockets:	getSockets(pid.State.Pid),
+			Name:    container.Names[0][1:],
+			Pid:     pid.State.Pid,
+			Sockets: getSockets(pid.State.Pid),
 		}
 		myList = append(myList, cont)
 	}
@@ -61,7 +61,7 @@ func getContainers() Containers {
 func getSockets(pid int) []sock {
 	// configure to enter network namespace (Net: true)
 	nscfg := nsenter.Config{
-		Net:	true,
+		Net:    true,
 		Target: pid,
 	}
 
@@ -72,11 +72,11 @@ func getSockets(pid int) []sock {
 	str := re.FindAllString(stdout, len(stdout))
 	var socks []sock
 
-	for _, s := range str{
+	for _, s := range str {
 		result := strings.Fields(s)
 		mySocket := strings.Split(result[4], ":")
 		var skt = make(map[string]int)
-		port,_ := strconv.Atoi(mySocket[1])
+		port, _ := strconv.Atoi(mySocket[1])
 		skt[mySocket[0]] = port
 		socks = append(socks, skt)
 	}

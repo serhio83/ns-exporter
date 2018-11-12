@@ -16,7 +16,7 @@ var (
 		prometheus.GaugeOpts{
 			Name: "ns_exporter_tcp_established",
 			Help: "Namespace tcp sockets established",
-		},[]string{"container_name", "ip", "port"},
+		}, []string{"container_name", "ip", "port"},
 	)
 )
 
@@ -32,7 +32,7 @@ func main() {
 
 }
 
-func run(interval int)  {
+func run(interval int) {
 	for {
 		tcpconn.Reset()
 		c := getContainers()
@@ -42,16 +42,15 @@ func run(interval int)  {
 			count := map[string]float64{}
 			for _, skt := range cont.Sockets {
 				for ip, port := range skt {
-					if _, ok := count[strconv.Itoa(port) + ip]; ok {
-						count[strconv.Itoa(port) + ip] += 1
+					if _, ok := count[strconv.Itoa(port)+ip]; ok {
+						count[strconv.Itoa(port)+ip] += 1
 					} else {
-						count[strconv.Itoa(port) + ip] = 1
+						count[strconv.Itoa(port)+ip] = 1
 					}
-					tcpconn.With(prometheus.Labels{"container_name": cont.Name, "ip": ip,"port": strconv.Itoa(port)}).Set(count[strconv.Itoa(port) + ip])
+					tcpconn.With(prometheus.Labels{"container_name": cont.Name, "ip": ip, "port": strconv.Itoa(port)}).Set(count[strconv.Itoa(port)+ip])
 				}
 			}
 		}
-
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
