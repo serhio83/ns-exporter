@@ -29,14 +29,13 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	go run(int(*interval))
 	log.Fatal(http.ListenAndServe(*addr, nil))
-
 }
 
 func run(interval int) {
 	for {
-		tcpconn.Reset()
 		c := getContainers()
-
+		tcpconn.Reset()
+		
 		// collect tcp connections metrics
 		for _, cont := range c.List {
 			count := map[string]float64{}

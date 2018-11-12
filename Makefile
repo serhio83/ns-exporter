@@ -43,7 +43,7 @@ install:		$(INSTALL_LIST)
 $(DEPS_LIST): %_deps:
 	$(GODEP) $*
 $(BUILD_LIST): %_build:
-	$(GOBUILD) -o $(BINPATH)/$(shell basename $*) $*
+	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINPATH)/$(shell basename $*) $*
 
 $(TEST_LIST): %_test:
 	$(GOTEST) $*

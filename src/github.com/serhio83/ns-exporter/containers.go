@@ -66,7 +66,7 @@ func getSockets(pid int) []sock {
 	}
 
 	// get sockets from container namespace
-	stdout, _, _ := nscfg.Execute("ss", "-nat")
+	stdout, _, _ := nscfg.Execute("ss", "-4nat")
 
 	// find all needed sockets in ESTAB state by regex compiled above
 	str := re.FindAllString(stdout, len(stdout))
