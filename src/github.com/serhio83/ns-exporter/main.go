@@ -62,7 +62,7 @@ func run(interval int, containers *Containers) {
 				}
 			}
 
-			for _, tcpTW := range container.tcpConnEstab {
+			for _, tcpTW := range container.tcpConnTW {
 				for ip, port := range tcpTW {
 					if _, ok := twCount[strconv.Itoa(port)+ip]; ok {
 						twCount[strconv.Itoa(port)+ip] += 1
