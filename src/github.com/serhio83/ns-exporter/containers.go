@@ -18,18 +18,21 @@ const defaultDockerAPIVersion = "v1.35"
 type sock map[string]int
 
 type Container struct {
-	Name    string
-	Pid     int
-	Sockets []sock
+	name         string
+	pid          int
+	tcpConnEstab []sock
+	tcpConnTW    []sock
 }
 
 type Containers struct {
-	List []Container
+	contList []Container
 }
 
-var re = regexp.MustCompile(`ESTAB.*`)
+var reConnEst = regexp.MustCompile(`ESTAB.*`)
+var reConnTW = regexp.MustCompile(`TIME-WAIT.*`)
 
-func getContainers() Containers {
+// connects to docker API & gets containers names
+func (conts *Containers) getContainers() {
 	// init docker client
 	cli, err := client.NewClientWithOpts(client.WithVersion(defaultDockerAPIVersion))
 	if err != nil {
@@ -43,36 +46,46 @@ func getContainers() Containers {
 	}
 
 	var myList []Container
+
 	for _, container := range containers {
 		pid, err := cli.ContainerInspect(context.Background(), container.ID)
 		if err != nil {
 			log.Println(err)
 		}
 		cont := Container{
-			Name:    container.Names[0][1:],
-			Pid:     pid.State.Pid,
-			Sockets: getSockets(pid.State.Pid),
+			name: container.Names[0][1:],
+			pid:  pid.State.Pid,
 		}
+		cont.getTcpConn()
 		myList = append(myList, cont)
 	}
-	return Containers{List: myList}
+
+	conts.contList = myList
 }
 
-func getSockets(pid int) []sock {
+// collects tcp connections inside network namespace of docker container
+func (cont *Container) getTcpConn() {
 	// configure to enter network namespace (Net: true)
 	nscfg := nsenter.Config{
 		Net:    true,
-		Target: pid,
+		Target: cont.pid,
 	}
 
 	// get sockets from container namespace
 	stdout, _, _ := nscfg.Execute("ss", "-4nat")
 
-	// find all needed sockets in ESTAB state by regex compiled above
-	str := re.FindAllString(stdout, len(stdout))
+	// find all needed sockets in ESTAB & TIME-WAIT state by regexps compiled above
+	connEst := reConnEst.FindAllString(stdout, len(stdout))
+	connTW := reConnTW.FindAllString(stdout, len(stdout))
+	cont.tcpConnEstab = parseSocketInfo(connEst)
+	cont.tcpConnTW = parseSocketInfo(connTW)
+}
+
+// parses stdout & collects IPs + ports
+func parseSocketInfo(connList []string) []sock {
 	var socks []sock
 
-	for _, s := range str {
+	for _, s := range connList {
 		result := strings.Fields(s)
 		mySocket := strings.Split(result[4], ":")
 		var skt = make(map[string]int)
@@ -80,5 +93,6 @@ func getSockets(pid int) []sock {
 		skt[mySocket[0]] = port
 		socks = append(socks, skt)
 	}
+
 	return socks
 }
