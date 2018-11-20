@@ -22,6 +22,7 @@ type Container struct {
 	pid          int
 	tcpConnEstab []sock
 	tcpConnTW    []sock
+	fd					 int
 }
 
 type Containers struct {
@@ -57,6 +58,7 @@ func (conts *Containers) getContainers() {
 			pid:  pid.State.Pid,
 		}
 		cont.getTcpConn()
+		cont.getFD()
 		myList = append(myList, cont)
 	}
 
@@ -95,4 +97,14 @@ func parseSocketInfo(connList []string) []sock {
 	}
 
 	return socks
+}
+
+func (cont *Container) getFD() {
+	nscfg := nsenter.Config{
+		Mount:    true,
+		Target: cont.pid,
+	}
+
+	stdout, _, _ := nscfg.Execute("ls", "/proc/1/fd")
+	cont.fd = strings.Count(stdout, "\n")
 }

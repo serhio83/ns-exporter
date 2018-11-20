@@ -24,15 +24,24 @@ var (
 			Help: "Namespace tcp sockets time-wait",
 		}, []string{"container_name", "ip", "port"},
 	)
+	fdOpenCollector = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "ns_exporter_fd_open",
+			Help: "Namespace file descriptors open for pid 1",
+		}, []string{"container_name"},
+	)
 )
 
 func main() {
 	addr := flag.String("web.listen-address", ":9515", "Address on which to expose metrics")
 	interval := flag.Int("interval", 10, "Interval for metrics collection in seconds")
 	flag.Parse()
+
 	containers := &Containers{}
 	prometheus.MustRegister(tcpConnEstabCollector)
 	prometheus.MustRegister(tcpConnTWCollector)
+	prometheus.MustRegister(fdOpenCollector)
+
 	log.Println("Listen on:", *addr)
 	http.Handle("/metrics", promhttp.Handler())
 	go run(int(*interval), containers)
@@ -44,6 +53,7 @@ func run(interval int, containers *Containers) {
 		containers.getContainers()
 		tcpConnEstabCollector.Reset()
 		tcpConnTWCollector.Reset()
+		fdOpenCollector.Reset()
 
 		// collect tcp connections
 		for _, container := range containers.contList {
@@ -72,6 +82,7 @@ func run(interval int, containers *Containers) {
 					tcpConnTWCollector.With(prometheus.Labels{"container_name": container.name, "ip": ip, "port": strconv.Itoa(port)}).Set(twCount[strconv.Itoa(port)+ip])
 				}
 			}
+			fdOpenCollector.With(prometheus.Labels{"container_name": container.name}).Set(float64(container.fd))
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
